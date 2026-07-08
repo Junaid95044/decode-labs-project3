@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signal Console — Project 3 · DecodeLabs</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root{
+    --ink:#eef1f0;
+    --panel:#101a26;
+    --panel-2:#16212f;
+    --line: rgba(238,241,240,0.12);
+    --input: #ff6b6b;
+    --process:#4ecdc4;
+    --output:#95e1d3;
+    --accent: #a78bfa;
+    --muted:#8fa0ad;
+    --bg:#0a0e27;
+    --radius:8px;
+    --mono:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+    --sans:'Space Grotesk','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+  }
+
+  body.is-light{
+    --ink:#0a0e27;
+    --panel:#f8f7f4;
+    --panel-2:#ffffff;
+    --line: rgba(10, 14, 39, 0.08);
+    --bg:#f5f3f0;
+    --muted:#6b7280;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    background:linear-gradient(135deg, var(--bg) 0%, #1a1f4e 100%);
+    color:var(--ink);
+    font-family:var(--sans);
+    transition: background .35s ease, color .35s ease;
+    min-height:100vh;
+    position:relative;
+  }
+
+  body::before{
+    content:'';
+    position:fixed;
+    top:0; left:0; right:0; bottom:0;
+    background:radial-gradient(circle at 20% 50%, rgba(167, 139, 250, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(78, 205, 196, 0.1) 0%, transparent 50%);
+    pointer-events:none;
+    z-index:-1;
+  }
+
+  .wrap{ max-width:980px; margin:0 auto; padding:60px 24px 100px; }
+
+  header.masthead{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    border-bottom:1px solid var(--line);
+    padding-bottom:32px; margin-bottom:50px;
+    gap:24px; flex-wrap:wrap;
+    animation: fadeInDown .6s ease-out;
+  }
+
+  @keyframes fadeInDown{ from{ opacity:0; transform:translateY(-20px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeInUp{ from{ opacity:0; transform:translateY(20px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes glow{ 0%, 100%{ text-shadow: 0 0 10px rgba(167, 139, 250, 0); } 50%{ text-shadow: 0 0 20px rgba(167, 139, 250, 0.3); } }
+
+  .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--process); margin:0 0 12px;
+    font-weight:600;
+  }
+
+  h1{
+    font-size:clamp(36px,6vw,56px); line-height:1.1; margin:0 0 12px;
+    letter-spacing:-0.02em; font-weight:700;
+    background:linear-gradient(135deg, var(--output) 0%, var(--accent) 100%);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+  }
+
+  .sub{ color:var(--muted); font-size:16px; max-width:50ch; margin:0; line-height:1.6; }
+
+  #js-theme-toggle{
+    font-family:var(--mono); font-size:12px; letter-spacing:.06em;
+    background:linear-gradient(135deg, var(--panel-2), color-mix(in srgb, var(--panel-2) 80%, transparent));
+    color:var(--ink); border:1px solid var(--line);
+    padding:12px 18px; border-radius:var(--radius); cursor:pointer;
+    display:flex; align-items:center; gap:10px; white-space:nowrap;
+    transition: all .3s ease;
+    box-shadow: var(--shadow-sm);
+    font-weight:600;
+  }
+  #js-theme-toggle:hover{ 
+    border-color:var(--process);
+    transform:translateY(-2px);
+    box-shadow: 0 6px 20px rgba(78, 205, 196, 0.2);
+  }
+  #js-theme-toggle:active{ transform:translateY(0); }
+  
+  #js-theme-toggle .dot{
+    width:10px; height:10px; border-radius:50%; background:var(--output);
+    box-shadow:0 0 0 4px color-mix(in srgb, var(--output) 20%, transparent);
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse{ 0%, 100%{ box-shadow:0 0 0 4px color-mix(in srgb, var(--output) 20%, transparent); } 50%{ box-shadow:0 0 0 8px color-mix(in srgb, var(--output) 0%, transparent); } }
+  
+  body.is-light #js-theme-toggle .dot{ background:var(--input); box-shadow:0 0 0 4px color-mix(in srgb, var(--input) 20%, transparent); }
+
+  section.module{
+    background:rgba(22, 33, 47, 0.5);
+    backdrop-filter: blur(10px);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:32px;
+    margin-bottom:28px;
+    position:relative;
+    overflow:hidden;
+    animation: fadeInUp .6s ease-out;
+    transition: all .3s ease;
+    box-shadow: var(--shadow-sm);
+  }
+
+  section.module::before{
+    content:'';
+    position:absolute;
+    top:-50%;
+    right:-50%;
+    width:200px;
+    height:200px;
+    background:radial-gradient(circle, rgba(167, 139, 250, 0.15) 0%, transparent 70%);
+    border-radius:50%;
+    pointer-events:none;
+  }
+
+  section.module:hover{
+    border-color:var(--process);
+    box-shadow: 0 12px 40px rgba(78, 205, 196, 0.15);
+    transform:translateY(-4px);
+  }
+
+  section.module:nth-child(even)::before{
+    background:radial-gradient(circle, rgba(78, 205, 196, 0.15) 0%, transparent 70%);
+  }
+
+  .module-head{ display:flex; align-items:baseline; gap:12px; margin-bottom:8px; position:relative; z-index:1; }
+  
+  .module-tag{
+    font-family:var(--mono); font-size:10px; color:var(--process);
+    border:1px solid color-mix(in srgb, var(--process) 40%, var(--line));
+    background:color-mix(in srgb, var(--process) 10%, transparent);
+    padding:4px 10px; border-radius:20px;
+    font-weight:600;
+    letter-spacing:.06em;
+  }
+  
+  h2{ font-size:22px; margin:0; font-weight:700; }
+  .module-desc{ color:var(--muted); font-size:15px; margin:8px 0 24px; max-width:60ch; line-height:1.6; position:relative; z-index:1; }
+
+  /* ---- IPO trace strip ---- */
+  .trace{
+    display:flex; gap:6px; font-family:var(--mono); font-size:10px;
+    letter-spacing:.08em; text-transform:uppercase; margin-bottom:24px;
+    position:relative; z-index:1;
+  }
+  .trace span{
+    padding:6px 12px; border-radius:20px; border:1.5px solid var(--line);
+    color:var(--muted); transition: all .3s ease;
+    font-weight:600;
+  }
+  .trace span.is-active.input{ 
+    color:var(--input); border-color:var(--input);
+    background:color-mix(in srgb, var(--input) 15%, transparent);
+    box-shadow: 0 0 12px rgba(255, 107, 107, 0.3);
+    transform:scale(1.05);
+  }
+  .trace span.is-active.process{ 
+    color:var(--process); border-color:var(--process);
+    background:color-mix(in srgb, var(--process) 15%, transparent);
+    box-shadow: 0 0 12px rgba(78, 205, 196, 0.3);
+    transform:scale(1.05);
+  }
+  .trace span.is-active.output{ 
+    color:var(--output); border-color:var(--output);
+    background:color-mix(in srgb, var(--output) 15%, transparent);
+    box-shadow: 0 0 12px rgba(149, 225, 211, 0.3);
+    transform:scale(1.05);
+  }
+
+  /* ---- Module 1: readout ---- */
+  .readout{
+    font-family:var(--mono); font-size:13px; background:var(--panel-2);
+    border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px;
+    color:var(--muted); position:relative; z-index:1;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+  .readout b{ color:var(--process); font-weight:600; }
+
+  /* ---- Module 2: counter ---- */
+  .counter-row{ 
+    display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+    position:relative; z-index:1;
+  }
+  
+  .btn{
+    font-family:var(--mono); font-size:14px; border:1.5px solid var(--line);
+    background:linear-gradient(135deg, var(--panel-2), color-mix(in srgb, var(--panel-2) 85%, transparent));
+    color:var(--ink); padding:12px 20px;
+    border-radius:var(--radius); cursor:pointer;
+    transition: all .3s ease;
+    font-weight:600;
+    position:relative;
+    overflow:hidden;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btn::before{
+    content:'';
+    position:absolute;
+    top:0; left:-100%;
+    width:100%; height:100%;
+    background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--process) 30%, transparent), transparent);
+    transition: left .5s ease;
+  }
+
+  .btn:hover{ 
+    border-color:var(--process);
+    box-shadow: 0 8px 20px rgba(78, 205, 196, 0.2);
+    transform:translateY(-2px);
+  }
+
+  .btn:hover::before{ left:100%; }
+
+  .btn:active{ transform:translateY(0); }
+  
+  .btn.js-decrement{ border-color: color-mix(in srgb, var(--input) 50%, var(--line)); }
+  .btn.js-decrement:hover{ border-color:var(--input); box-shadow: 0 8px 20px rgba(255, 107, 107, 0.2); }
+  
+  .btn.js-increment{ border-color: color-mix(in srgb, var(--output) 50%, var(--line)); }
+  .btn.js-increment:hover{ border-color:var(--output); box-shadow: 0 8px 20px rgba(149, 225, 211, 0.2); }
+  
+  .btn.js-reset{ font-size:12px; color:var(--muted); }
+  .btn.js-reset:hover{ color:var(--accent); }
+
+  #js-count-display{
+    font-family:var(--mono); font-size:48px; min-width:80px; text-align:center;
+    padding:12px 16px; border-radius:var(--radius); 
+    transition: all .2s ease;
+    font-weight:700;
+    background:color-mix(in srgb, var(--process) 10%, transparent);
+    border:1px solid color-mix(in srgb, var(--process) 30%, var(--line));
+  }
+  #js-count-display.is-hot{ 
+    color:var(--output);
+    transform:scale(1.12) rotate(2deg);
+    box-shadow: 0 0 20px rgba(149, 225, 211, 0.4);
+  }
+  #js-count-display.is-cold{ 
+    color:var(--input);
+    transform:scale(1.12) rotate(-2deg);
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.4);
+  }
+
+  .limit-note{ 
+    font-family:var(--mono); font-size:12px; color:var(--input); 
+    margin-top:16px; padding:10px 12px;
+    background:color-mix(in srgb, var(--input) 10%, transparent);
+    border-left:3px solid var(--input);
+    border-radius:4px;
+    position:relative; z-index:1;
+    font-weight:600;
+  }
+  .limit-note.is-hidden{ display:none; }
+
+  /* ---- Module 3: task queue ---- */
+  .queue-input-row{ 
+    display:flex; gap:12px; margin-bottom:20px;
+    position:relative; z-index:1;
+  }
+  
+  #js-task-input{
+    flex:1; font-family:var(--sans); font-size:15px;
+    background:var(--panel-2);
+    color:var(--ink); border:1.5px solid var(--line);
+    border-radius:var(--radius); padding:12px 16px;
+    transition: all .3s ease;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  #js-task-input::placeholder{ color:var(--muted); opacity:0.6; }
+  
+  #js-task-input:focus{ 
+    outline:none; border-color:var(--process);
+    box-shadow: 0 0 20px rgba(78, 205, 196, 0.2);
+    background:var(--panel-2);
+  }
+
+  #js-task-list{ 
+    list-style:none; margin:0; padding:0;
+    display:flex; flex-direction:column; gap:10px;
+    position:relative; z-index:1;
+  }
+  
+  .task-row{
+    display:flex; align-items:center; gap:12px;
+    background:var(--panel-2);
+    border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px 16px;
+    animation: slideInFade .3s ease;
+    transition: all .3s ease;
+    position:relative;
+    overflow:hidden;
+  }
+
+  .task-row::before{
+    content:'';
+    position:absolute;
+    left:0; top:0;
+    width:3px; height:100%;
+    background:linear-gradient(180deg, var(--process), var(--output));
+    opacity:0;
+    transition: opacity .3s ease;
+  }
+
+  .task-row:hover{
+    border-color:var(--process);
+    box-shadow: 0 4px 16px rgba(78, 205, 196, 0.15);
+    transform:translateX(4px);
+  }
+
+  .task-row:hover::before{ opacity:1; }
+
+  @keyframes slideInFade{ 
+    from{ 
+      opacity:0;
+      transform:translateX(-16px);
+    } 
+    to{ 
+      opacity:1;
+      transform:translateX(0);
+    } 
+  }
+
+  .task-row .js-toggle-done{
+    width:20px; height:20px; border-radius:4px;
+    border:1.5px solid var(--line);
+    background:transparent; cursor:pointer; flex-shrink:0;
+    position:relative; transition: all .25s ease;
+  }
+
+  .task-row .js-toggle-done:hover{
+    border-color:var(--output);
+  }
+
+  .task-row.is-done .js-toggle-done{
+    background:linear-gradient(135deg, var(--output), var(--process));
+    border-color:var(--output);
+    box-shadow: 0 0 12px rgba(149, 225, 211, 0.3);
+  }
+
+  .task-row.is-done .js-toggle-done::after{
+    content:'';
+    position:absolute; left:6px; top:2px;
+    width:4px; height:9px;
+    border:solid white; border-width:0 2px 2px 0;
+    transform:rotate(45deg);
+  }
+
+  .task-row span.label{ flex:1; font-size:15px; font-weight:500; }
+  .task-row.is-done span.label{ color:var(--muted); text-decoration:line-through; opacity:0.7; }
+
+  .task-row .js-remove-task{
+    background:none; border:none; color:var(--muted); cursor:pointer;
+    font-family:var(--mono);
+    font-size:18px; line-height:1; padding:2px 8px;
+    border-radius:4px; transition: all .2s ease;
+    font-weight:600;
+  }
+
+  .task-row .js-remove-task:hover{ 
+    color:var(--input);
+    background: color-mix(in srgb, var(--input) 20%, transparent);
+    transform:scale(1.2) rotate(90deg);
+  }
+
+  .queue-empty{
+    font-family:var(--mono); font-size:14px;
+    color:var(--muted); text-align:center; padding:32px 24px;
+    position:relative; z-index:1;
+    background:color-mix(in srgb, var(--muted) 5%, transparent);
+    border-radius:var(--radius);
+    border:1px dashed var(--line);
+  }
+
+  .queue-empty.is-hidden{ display:none; }
+
+  .queue-meta{
+    display:flex; justify-content:space-between; margin-top:20px;
+    font-family:var(--mono); font-size:12px; color:var(--muted);
+    position:relative; z-index:1;
+    padding-top:16px; border-top:1px solid var(--line);
+    font-weight:600;
+  }
+
+  footer{
+    text-align:center; font-family:var(--mono); font-size:12px;
+    color:var(--muted); letter-spacing:.06em; margin-top:48px;
+    position:relative; z-index:1;
+    font-weight:600;
+  }
+
+  /* Responsive */
+  @media(max-width: 640px){
+    .wrap{ padding:40px 16px 60px; }
+    header.masthead{ margin-bottom:32px; }
+    h1{ font-size:32px; }
+    section.module{ padding:24px; }
+    .counter-row{ gap:12px; }
+    #js-count-display{ font-size:36px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">Project 3 · Interactive Web Elements</p>
+      <h1>Signal Console</h1>
+      <p class="sub">Three wired circuits, one contract: an event fires, a function decides, the DOM mutates. Try each panel below.</p>
+    </div>
+    <button id="js-theme-toggle" type="button" aria-pressed="false">
+      <span class="dot"></span>
+      <span id="js-theme-label">Dark mode</span>
+    </button>
+  </header>
+
+  <!-- MODULE 1 — Theme toggle (the deck's own case study) -->
+  <section class="module">
+    <div class="module-head">
+      <h2>Theme Circuit</h2>
+      <span class="module-tag">classList.toggle</span>
+    </div>
+    <p class="module-desc">The button above is wired to this panel. Toggling it flips a class on &lt;body&gt;; CSS handles what that class looks like.</p>
+    <div class="trace" id="js-trace-theme">
+      <span class="input">input</span>
+      <span class="process">process</span>
+      <span class="output">output</span>
+    </div>
+    <div class="readout">
+      current state → <b id="js-theme-state">is-dark</b><br>
+      last action → <b id="js-theme-action">page loaded, no toggle yet</b>
+    </div>
+  </section>
+
+  <!-- MODULE 2 — Counter -->
+  <section class="module">
+    <div class="module-head">
+      <h2>Signal Counter</h2>
+      <span class="module-tag">addEventListener</span>
+    </div>
+    <p class="module-desc">Two buttons, one piece of state, one line that writes it back to the page with <code>textContent</code>.</p>
+    <div class="trace" id="js-trace-counter">
+      <span class="input">input</span>
+      <span class="process">process</span>
+      <span class="output">output</span>
+    </div>
+    <div class="counter-row">
+      <button class="btn js-decrement" type="button" aria-label="Decrease count">−</button>
+      <span id="js-count-display">0</span>
+      <button class="btn js-increment" type="button" aria-label="Increase count">+</button>
+      <button class="btn js-reset" type="button">reset</button>
+    </div>
+    <p class="limit-note is-hidden" id="js-limit-note">holding steady at the floor — signal can't go negative</p>
+  </section>
+
+  <!-- MODULE 3 — Dynamic task queue -->
+  <section class="module">
+    <div class="module-head">
+      <h2>Task Queue</h2>
+      <span class="module-tag">createElement · appendChild</span>
+    </div>
+    <p class="module-desc">Add an item, check it off, or remove it. Every row here is a DOM node built by JavaScript, not written in the HTML.</p>
+    <div class="queue-input-row">
+      <input type="text" id="js-task-input" placeholder="Add a task and press Enter…" maxlength="60">
+      <button class="btn js-add-task" type="button">Add</button>
+    </div>
+    <p class="queue-empty" id="js-queue-empty">Queue is empty. Add a task above.</p>
+    <ul id="js-task-list"></ul>
+    <div class="queue-meta">
+      <span id="js-queue-count">0 tasks</span>
+      <span id="js-queue-done">0 completed</span>
+    </div>
+  </section>
+
+  <footer>DecodeLabs · Frontend Development · Batch 2026</footer>
+</div>
+
+<script>
+  /* ============================================================
+     MODULE 1 — THEME CIRCUIT
+     INPUT: click on #js-theme-toggle
+     PROCESS: flip boolean, decide label + trace text
+     OUTPUT: classList.toggle on body, textContent updates
+     ============================================================ */
+  const themeToggleBtn = document.querySelector('#js-theme-toggle');
+  const themeLabel = document.querySelector('#js-theme-label');
+  const themeStateReadout = document.querySelector('#js-theme-state');
+  const themeActionReadout = document.querySelector('#js-theme-action');
+  const themeTrace = document.querySelectorAll('#js-trace-theme span');
+
+  let isLight = false; // in-memory state — no persistence needed for a demo circuit
+
+  function pulseTrace(traceEls){
+    traceEls.forEach((el) => el.classList.add('is-active'));
+    window.setTimeout(() => {
+      traceEls.forEach((el) => el.classList.remove('is-active'));
+    }, 900);
+  }
+
+  themeToggleBtn.addEventListener('click', () => {
+    isLight = !isLight;
+
+    document.body.classList.toggle('is-light', isLight);
+    themeToggleBtn.setAttribute('aria-pressed', String(isLight));
+
+    themeLabel.textContent = isLight ? 'Light mode' : 'Dark mode';
+    themeStateReadout.textContent = isLight ? 'is-light' : 'is-dark';
+    themeActionReadout.textContent = `toggled to ${isLight ? 'light' : 'dark'} at ${new Date().toLocaleTimeString()}`;
+
+    pulseTrace(themeTrace);
+  });
+
+  /* ============================================================
+     MODULE 2 — SIGNAL COUNTER
+     INPUT: click on increment / decrement / reset
+     PROCESS: mutate `count`, clamp at zero
+     OUTPUT: textContent write + brief hot/cold class flash
+     ============================================================ */
+  const countDisplay = document.querySelector('#js-count-display');
+  const incrementBtn = document.querySelector('.js-increment');
+  const decrementBtn = document.querySelector('.js-decrement');
+  const resetBtn = document.querySelector('.js-reset');
+  const limitNote = document.querySelector('#js-limit-note');
+  const counterTrace = document.querySelectorAll('#js-trace-counter span');
+
+  let count = 0;
+
+  function renderCount(direction){
+    countDisplay.textContent = count;
+    countDisplay.classList.remove('is-hot', 'is-cold');
+    // force reflow so the flash animation can re-trigger on repeat clicks
+    void countDisplay.offsetWidth;
+    countDisplay.classList.add(direction === 'up' ? 'is-hot' : 'is-cold');
+    pulseTrace(counterTrace);
+  }
+
+  incrementBtn.addEventListener('click', () => {
+    count += 1;
+    limitNote.classList.add('is-hidden');
+    renderCount('up');
+  });
+
+  decrementBtn.addEventListener('click', () => {
+    if (count === 0) {
+      limitNote.classList.remove('is-hidden');
+      pulseTrace(counterTrace);
+      return;
+    }
+    count -= 1;
+    limitNote.classList.add('is-hidden');
+    renderCount('down');
+  });
+
+  resetBtn.addEventListener('click', () => {
+    count = 0;
+    limitNote.classList.add('is-hidden');
+    renderCount('down');
+  });
+
+  /* ============================================================
+     MODULE 3 — TASK QUEUE
+     INPUT: Add button / Enter key / checkbox click / remove click
+     PROCESS: mutate `tasks` array (the single source of truth)
+     OUTPUT: rebuild the <ul> from that array — never trust stray DOM edits
+     ============================================================ */
+  const taskInput = document.querySelector('#js-task-input');
+  const addTaskBtn = document.querySelector('.js-add-task');
+  const taskList = document.querySelector('#js-task-list');
+  const queueEmpty = document.querySelector('#js-queue-empty');
+  const queueCount = document.querySelector('#js-queue-count');
+  const queueDone = document.querySelector('#js-queue-done');
+
+  let tasks = []; // each task: { id, label, done }
+  let nextId = 1;
+
+  function addTask(){
+    const value = taskInput.value.trim();
+    if (!value) return;
+
+    tasks.push({ id: nextId, label: value, done: false });
+    nextId += 1;
+
+    taskInput.value = '';
+    taskInput.focus();
+    renderTasks();
+  }
+
+  function toggleTask(id){
+    tasks = tasks.map((task) =>
+      task.id === id ? { ...task, done: !task.done } : task
+    );
+    renderTasks();
+  }
+
+  function removeTask(id){
+    tasks = tasks.filter((task) => task.id !== id);
+    renderTasks();
+  }
+
+  function renderTasks(){
+    // clear and rebuild — the array is the single source of truth
+    taskList.textContent = '';
+
+    queueEmpty.classList.toggle('is-hidden', tasks.length > 0);
+
+    tasks.forEach((task) => {
+      const row = document.createElement('li');
+      row.className = 'task-row' + (task.done ? ' is-done' : '');
+
+      const checkbox = document.createElement('button');
+      checkbox.className = 'js-toggle-done';
+      checkbox.type = 'button';
+      checkbox.setAttribute('aria-label', 'Toggle task complete');
+      checkbox.addEventListener('click', () => toggleTask(task.id));
+
+      const label = document.createElement('span');
+      label.className = 'label';
+      label.textContent = task.label; // textContent, never innerHTML — see deck's security note
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'js-remove-task';
+      removeBtn.type = 'button';
+      removeBtn.setAttribute('aria-label', 'Remove task');
+      removeBtn.textContent = '×';
+      removeBtn.addEventListener('click', () => removeTask(task.id));
+
+      row.appendChild(checkbox);
+      row.appendChild(label);
+      row.appendChild(removeBtn);
+      taskList.appendChild(row);
+    });
+
+    const doneCount = tasks.filter((task) => task.done).length;
+    queueCount.textContent = `${tasks.length} task${tasks.length === 1 ? '' : 's'}`;
+    queueDone.textContent = `${doneCount} completed`;
+  }
+
+  addTaskBtn.addEventListener('click', addTask);
+  taskInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') addTask();
+  });
+
+  // seed one example row so the queue isn't empty on first load
+  tasks.push({ id: nextId, label: 'Wire up your first event listener', done: true });
+  nextId += 1;
+  renderTasks();
+</script>
+
+</body>
+</html>
